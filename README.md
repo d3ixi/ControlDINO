@@ -15,7 +15,8 @@
 ```
 git clone --recursive https://gitlab.tugraz.at/huawei_media/hisilicon/code_release/controldino.git
 cd ControlDINO
-git lfs install
+git lfs install # needed for weights and examples
+git lfs pull
 ```
 
 ### 2. Setup environments
