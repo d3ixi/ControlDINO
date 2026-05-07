@@ -13,7 +13,7 @@
 ## 📦 Setup
 ### 1. Clone ControlDINO
 ```
-git clone --recursive https://gitlab.tugraz.at/huawei_media/hisilicon/code_release/controldino.git
+git clone --recursive https://github.com/d3ixi/ControlDINO.git
 cd ControlDINO
 git lfs install # needed for weights and examples
 git lfs pull
