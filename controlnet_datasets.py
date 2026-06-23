@@ -6,6 +6,35 @@ from safetensors.torch import load_file
 from decord import VideoReader
 from torch.utils.data.dataset import Dataset
 
+@torch.no_grad()
+def load_dinov3():
+    from transformers import AutoModel
+    model = AutoModel.from_pretrained("facebook/dinov3-vits16-pretrain-lvd1689m")
+
+    return model.to(device="cuda").eval()
+
+@torch.no_grad()
+def compute_dinov3_features_2x(videos, model, dtype, chunk_size=16):
+    B, Fr, C, H, W = videos.shape
+
+    flat = videos.reshape(B * Fr, C, H, W).to(dtype)
+    flat = torch.nn.functional.interpolate(flat, scale_factor=2, mode="bicubic", align_corners=False)
+    mean = torch.tensor([0.485, 0.456, 0.406], device=flat.device, dtype=dtype).view(1, 3, 1, 1)
+    std = torch.tensor([0.229, 0.224, 0.225], device=flat.device, dtype=dtype).view(1, 3, 1, 1)
+    flat = ((flat + 1) / 2 - mean) / std
+
+    h_p, w_p = flat.shape[-2] // 16, flat.shape[-1] // 16
+    num_patches = h_p * w_p
+
+    outs = []
+    for i in range(0, flat.shape[0], chunk_size):
+        tokens = model(flat[i:i + chunk_size]).last_hidden_state
+        outs.append(tokens[:, -num_patches:])  # drop special tokens
+
+    feats = torch.cat(outs, dim=0)
+    feats = feats.reshape(B, Fr, h_p, w_p, -1).permute(0, 1, 4, 2, 3).contiguous()
+    return feats
+
 class RealEstate10KPCDRenderDataset(Dataset):
     def __init__(
             self,
@@ -19,7 +48,6 @@ class RealEstate10KPCDRenderDataset(Dataset):
         self.source_video_root = os.path.join(self.root_path, 'videos')
         self.mask_video_root = os.path.join(self.root_path, 'masked_videos')
         self.captions_root = os.path.join(self.root_path, 'captions')
-        self.features_root = os.path.join(self.root_path, 'features')
         self.dataset = sorted([n.replace('.mp4','') for n in os.listdir(self.source_video_root)])
         self.length = len(self.dataset)
         sample_size = image_size
@@ -30,6 +58,8 @@ class RealEstate10KPCDRenderDataset(Dataset):
                                 transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)]
 
         self.pixel_transforms = pixel_transforms
+
+        self.dinov3_model = load_dinov3()
 
     def load_video_reader(self, idx):
         clip_name = self.dataset[idx]
@@ -59,14 +89,9 @@ class RealEstate10KPCDRenderDataset(Dataset):
         anchor_pixels = torch.from_numpy(mask_video_reader.get_batch(mask_indices).asnumpy()).permute(0, 3, 1, 2).contiguous()
         anchor_pixels = anchor_pixels / 255.
 
-        features = load_file(os.path.join(self.features_root, clip_name + '.safetensors'), device='cpu')
-        if 'dinov3_features' in features.keys():
-            features = features['dinov3_features']
-        elif 'dino_features' in features.keys():
-            features = features['dino_features']
-        else:
-            raise RuntimeError(f"No dino features found. Available keys: {list(features.keys())}")
-        features= features.clamp(-1,1)
+        frames = (pixel_values) * 2 - 1
+        frames = frames.unsqueeze(dim=0).contiguous().cuda()  # [F, 3, H, W] in [-1, 1]
+        features = compute_dinov3_features_2x(frames, self.dinov3_model, dtype=frames.dtype).squeeze(dim=0)
 
         return pixel_values, anchor_pixels, video_caption, clip_name, features
 
