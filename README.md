@@ -1,5 +1,6 @@
 # Control-DINO: Feature Space Conditioning for Controllable Image-to-Video Diffusion
 <h2 align="center">ECCV 2026</h2>
+
 [![Project Website](https://img.shields.io/badge/Project-ControlDINO-blue)](https://dedoardo.github.io/projects/control-dino)  [![Static Badge](https://img.shields.io/badge/arXiv-2604.01761-d31101)](https://arxiv.org/abs/2604.01761)
 
 [Edoardo A. Dominici](https://dedoardo.github.io/)<sup>&#42;</sup>, 
@@ -36,10 +37,10 @@ Download [CogVideoX-5B-I2V](https://github.com/THUDM/CogVideo) (Base Model)
 python download.py 
 ```
 
-Download Control-Dino weights:
+Download Control-DINO weights:
 ```
 conda install -c conda-forge git-lfs
-git lfs install # needed for weights
+git lfs install
 git lfs pull
 ```
 
