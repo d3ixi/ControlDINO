@@ -51,6 +51,11 @@ git lfs pull
 ./scripts/inference_vkitti.sh   # vkitti
 ```
 
+### ⭐ Gradio App
+```
+python app.py
+```
+
 ## 🙏 Acknowledgements
 - This code mainly builds upon [CogVideoX-ControlNet](https://github.com/TheDenk/cogvideox-controlnet)
 - This code uses the original CogVideoX model [CogVideoX](https://github.com/THUDM/CogVideo/tree/main)

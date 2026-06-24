@@ -11,3 +11,4 @@ decord
 protobuf
 scipy
 scikit-image
+gradio=6.17.3
